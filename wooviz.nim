@@ -8,8 +8,6 @@ let
     xlim: Tscalar = 10.0
     ylim: Tscalar = 10.0
 
-    zoomFactor = 50.0
-
 
     offset: Tscalar = 20
 
@@ -32,4 +30,4 @@ ctx.fillStyle = rgba(255, 0, 0, 255)
 barChart(ctx, image, labels, numData, width, height, offset)
 axesNumerical(ctx, xlim, ylim, width, height, spread, offset)
 
-image.writeFile("bar.png")
+image.writeFile("res/bar.png")
