@@ -4,7 +4,9 @@ import
     std/sequtils,
     std/sugar,
     std/enumerate,
-    std/random
+    std/random,
+    std/strformat,
+    std/algorithm
 
 include utils
 
@@ -17,12 +19,15 @@ type
     Tscalar =   float
 
 
-
-proc axesNumerical(ctx: Tctx, xlim, ylim, width, height, spread, offset: Tscalar) = 
+proc axesNumerical(ctx: Tctx, image: Image, numData: TintData, xlim, ylim, width, height, spread, offset: Tscalar, step: int) = 
     ctx.strokeStyle = "#FF5C00"
-    ctx.lineWidth = 10
+    ctx.lineWidth = offset / 2.0
 
     let
+        maxVals: TfloatData = numData.map(x => float(max(x)))
+
+        maxMax = float(max(maxVals))
+
         startAxisX = vec2(offset, height - offset)
         stopAxisX = vec2(width - offset, height - offset)
 
@@ -32,43 +37,43 @@ proc axesNumerical(ctx: Tctx, xlim, ylim, width, height, spread, offset: Tscalar
 
 
     var
-        xLabels: TfloatData = @[]
-        yLabels: TfloatData = @[]
-        xLabelsY: TfloatData = @[]
-        yLabelsX: TfloatData = @[]
+        yNumbers: seq[float] = @[]
 
         i = 0
-        j = 0
-
-        spreadY = 0.0
-        spreadX = 0.0
 
 
+        numStep = 0
 
-    while i <= int(ceil(xlim)):
-        xLabels.add(spreadX)
-        xLabelsY.add(spreadX)
+        font = readFont("assets/Ubuntu-Regular_1.ttf")
 
 
-        spreadX += spread
+
+    font.size = 10
+
+    while i <= maxMax.toInt() div step:
+        yNumbers.add(numStep.toFloat())
+
+        numStep += step
+
 
         i += 1
 
-    while j <= int(ceil(ylim)):
-        yLabels.add(spreadY)
-        yLabelsX.add(spreadY)
-
-        spreadY += spread
-
-        j += 1
 
     let
-        xLabelsXYRect: TrectData = xLabelsY.map(y => proport(height, y, spreadX)).map(y => (10.0, y)).map(xy => rect(xy[0], xy[1], 8.0, 3.0))
-        yLabelsXYRect: TrectData = yLabelsX.map(x => proport(width, x, spreadY)).map(x => (x, height - 20)).map(xy => rect(xy[0], xy[1], 3.0, 8.0))
+        xLabelsXYRect: TrectData = yNumbers.map(y => proport(height - offset, y, maxMax)).map(y => (
+            offset / 2, y + offset)).map(xy => rect(xy[0], xy[1], offset / 2.0, offset / 4.0))
+        
+        xLabelsXYNum: seq[(int, float, float)] = yNumbers.map(
+            y => (y, proport(height - offset, y, maxMax))).map(y => (y[0].toInt(), offset / 18.0, y[1] + offset))
+        
 
+
+    apply(xLabelsXYNum, proc(x: (int, float, float)) = image.fillText(
+        font.typeset(fmt"{maxMax.toInt() - x[0]}", vec2(15, 5), hAlign=CenterAlign),
+        translate(vec2(x[1], x[2]))))
+    
 
     apply(xLabelsXYRect, proc(x: Rect) = ctx.fillRect(x))
-    apply(yLabelsXYRect, proc(x: Rect) = ctx.fillRect(x))
 
     ctx.strokeSegment(segment(startAxisX, stopAxisX))
     ctx.strokeSegment(segment(startAxisY, stopAxisY))
@@ -93,10 +98,15 @@ proc barChart(ctx: Tctx, image: Image, textData: TstrData, numData: TintData, wi
     font.size = 12
         
     for idx, mv in enumerate(maxVals):
-        rectsArr.add(rect(float(idx) * barWidth + offset, height - offset, barWidth, -(height * mv) / maxMax))
-        var t = (textData[idx], (float(idx) * barWidth + offset * 2.5, height - offset + (offset / 2)))
+        rectsArr.add(rect(float(idx) * barWidth + offset, height - offset, barWidth, -((height - offset) * mv) / maxMax))
+        var t = (textData[idx], (float(idx) * barWidth + offset * 2.5, height - offset + (offset / 3)))
         textLocs.add(t)
 
         
-    apply(rectsArr, proc(x: Rect) = ctx.fillRect(x))
-    apply(textLocs, proc(x: (string, (float, float))) = image.fillText(font.typeset(x[0], vec2(60, 20)), translate(vec2(x[1][0], x[1][1]))))
+    apply(rectsArr, proc(x: Rect) =
+                            var randR: float = rand(255.0)
+                            var randColor: Color = Color(r: randR, g: 255.0, b: 255.0)
+                            ctx.fillStyle = rgb(randColor)
+                            ctx.fillRect(x))
+
+    apply(textLocs, proc(x: (string, (float, float))) = image.fillText(font.typeset(x[0], vec2(60, offset)), translate(vec2(x[1][0], x[1][1]))))

@@ -22,3 +22,5 @@ proc `-]>`(file: string): seq[seq[string]] =
 
 proc proport(fortyFive, two, ninety: float): float =
     result = (fortyFive * two) / ninety
+
+
